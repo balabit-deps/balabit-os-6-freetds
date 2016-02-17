@@ -545,7 +545,7 @@ print_results(DBPROCESS *dbproc)
 							perror("could not write to output file");
 							exit(EXIT_FAILURE);
 						}
-						fprintf(stdout, metadata[c].format_string); /* col/row separator */
+						fprintf(stdout, "%s", metadata[c].format_string); /* col/row separator */
 						continue;
 					}
 					switch (data[c].status) { /* handle nulls */
@@ -824,7 +824,7 @@ get_login(int argc, char *argv[], OPTIONS *options)
 	
 	options->servername = getenv("DSQUERY");
 	
-	while ((ch = getopt(argc, argv, "U:P:S:dD:i:o:e:t:H:hqv")) != -1) {
+	while ((ch = getopt(argc, argv, "U:P:S:d:D:i:o:e:t:H:hqv")) != -1) {
 		switch (ch) {
 		case 'U':
 			username = strdup(optarg);

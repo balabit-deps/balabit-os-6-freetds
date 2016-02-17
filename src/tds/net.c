@@ -94,11 +94,13 @@
 #include <assert.h>
 
 #ifdef HAVE_GNUTLS
+#include <gnutls/gnutls.h>
 #if defined(_THREAD_SAFE) && defined(TDS_HAVE_PTHREAD_MUTEX)
 #include "tdsthread.h"
+#if GNUTLS_VERSION_NUMBER <= 0x020b00
 #include <gcrypt.h>
 #endif
-#include <gnutls/gnutls.h>
+#endif
 #elif defined(HAVE_OPENSSL)
 #include <openssl/ssl.h>
 #endif
@@ -1268,7 +1270,7 @@ tds_tls_deinit(void)
 }
 #endif
 
-#if defined(_THREAD_SAFE) && defined(TDS_HAVE_PTHREAD_MUTEX)
+#if defined(_THREAD_SAFE) && defined(TDS_HAVE_PTHREAD_MUTEX) && GNUTLS_VERSION_NUMBER <= 0x020b00
 GCRY_THREAD_OPTION_PTHREAD_IMPL;
 #define tds_gcry_init() gcry_control(GCRYCTL_SET_THREAD_CBS, &gcry_threads_pthread)
 #else
@@ -1280,25 +1282,6 @@ tds_ssl_init(TDSSOCKET *tds)
 {
 	gnutls_session session;
 	gnutls_certificate_credentials xcred;
-
-	static const int kx_priority[] = {
-		GNUTLS_KX_RSA_EXPORT, 
-		GNUTLS_KX_RSA, GNUTLS_KX_DHE_DSS, GNUTLS_KX_DHE_RSA, 
-		0
-	};
-	static const int cipher_priority[] = {
-		GNUTLS_CIPHER_AES_256_CBC, GNUTLS_CIPHER_AES_128_CBC,
-		GNUTLS_CIPHER_3DES_CBC, GNUTLS_CIPHER_ARCFOUR_128,
-#if 0
-		GNUTLS_CIPHER_ARCFOUR_40,
-		GNUTLS_CIPHER_DES_CBC,
-#endif
-		0
-	};
-	static const int comp_priority[] = { GNUTLS_COMP_NULL, 0 };
-	static const int mac_priority[] = {
-		GNUTLS_MAC_SHA, GNUTLS_MAC_MD5, 0
-	};
 	int ret;
 	const char *tls_msg;
 
@@ -1338,10 +1321,9 @@ tds_ssl_init(TDSSOCKET *tds)
 		gnutls_set_default_priority(session);
 
 		/* ... but overwrite some */
-		gnutls_cipher_set_priority(session, cipher_priority);
-		gnutls_compression_set_priority(session, comp_priority);
-		gnutls_kx_set_priority(session, kx_priority);
-		gnutls_mac_set_priority(session, mac_priority);
+		ret = gnutls_priority_set_direct (session,
+				"NORMAL:%COMPAT", NULL);
+
 		/* mssql does not like padding too much */
 #ifdef HAVE_GNUTLS_RECORD_DISABLE_PADDING
 		gnutls_record_disable_padding(session);
